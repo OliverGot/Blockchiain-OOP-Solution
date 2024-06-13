@@ -30,7 +30,7 @@ class Block():
 
 class Blockchain():
     def __init__(self):
-        self.__chain = [Block(0, datetime.datetime.now(), "The first block!", "0")]
+        self.__chain = [Block(0, datetime.datetime.now(), "The first block!", "0" * 64)]
 
     def addBlock(self, data):
         newBlock = Block(len(self.__chain), datetime.datetime.now(), data, self.__chain[-1].hash)
@@ -69,10 +69,21 @@ class User():
             return ballance
         return 0
     
+class Transaction():
+    def __init__(self, transferer, transferee, value, username, password, blockchain):
+        self.transferer = transferer
+        self.transferee = transferee
+        self.__username = username
+        self.__password = password
+        self.__authorised = self.calculateHash()
+        self.value = value
+
+    def calculateHash(self):
+        blockHash = hashlib.sha256()
+        blockHash.update(str(self.__username).encode("utf-8") + str(self.__password).encode("utf-8"))
+        return blockHash.hexdigest()
+    
 blockchain = Blockchain()
-blockchain.addBlock("hello")
-blockchain.addBlock("data")
-blockchain.addBlock("Cool")
 user = User("Oliver", "password")
 for i in range(20):
     workingBlock = ""
@@ -86,4 +97,3 @@ for i in range(0, blockchain.getBlock(-1).index + 1):
     print()
 print(user.calculateBallance(blockchain))
 print(blockchain.isValid())
-
