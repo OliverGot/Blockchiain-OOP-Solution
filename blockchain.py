@@ -1,7 +1,9 @@
 import datetime
 import hashlib
+import random
 
-DIFFICULTY = 5
+DIFFICULTY = 3
+TRANSACTIONS_PER_BLOCK = 3
 
 class Block():
     def __init__(self, index, time, data, previousHash):
@@ -21,6 +23,7 @@ class Block():
         while self.hash[0:difficulty] != "0" * difficulty:
             self.nonce += 1
             self.hash = self.calculateHash()
+        print(f"Mined:{self.hash}")
 
     def __str__(self):
         return f"Index:{self.index}\nTime:{self.time}\nData:{self.data}\nNonce:{self.nonce}\nPrevious Hash:{self.previousHash}\nHash:{self.hash}"
@@ -44,7 +47,7 @@ class Blockchain():
         return True
 
 class User():
-    def __init__(self, username, password, currency):
+    def __init__(self, username, password):
         self.__username = username
         self.__password = password
         self.hash = self.calculateHash()
@@ -53,13 +56,34 @@ class User():
         blockHash = hashlib.sha256()
         blockHash.update(str(self.__username).encode("utf-8") + str(self.__password).encode("utf-8"))
         return blockHash.hexdigest()
-
+    
+    def calculateBallance(self, blockchain):
+        ballance = 0
+        for i in range(blockchain.getBlock(-1).index + 1):
+            blockData = blockchain.getBlock(i).data.split("\n")
+            for transaction in blockData:
+                transactionData = transaction.split(",")
+                if transactionData[0] == self.hash:
+                    ballance += int(transactionData[1])
+        if blockchain.isValid():
+            return ballance
+        return 0
+    
 blockchain = Blockchain()
 blockchain.addBlock("hello")
 blockchain.addBlock("data")
 blockchain.addBlock("Cool")
+user = User("Oliver", "password")
+for i in range(20):
+    workingBlock = ""
+    for i in range(10):
+        amount = random.randint(0, 20)
+        workingBlock += user.hash + f",{amount}\n"
+    blockchain.addBlock(workingBlock)
+
 for i in range(0, blockchain.getBlock(-1).index + 1):
     print(blockchain.getBlock(i))
     print()
+print(user.calculateBallance(blockchain))
 print(blockchain.isValid())
 
