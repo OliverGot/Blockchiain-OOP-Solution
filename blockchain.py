@@ -3,7 +3,7 @@ import hashlib
 import random
 
 DIFFICULTY = 3
-TRANSACTIONS_PER_BLOCK = 3
+TRANSACTIONS_PER_BLOCK = 1
 
 class Block():
     def __init__(self, index, time, data, previousHash):
@@ -19,7 +19,8 @@ class Block():
         blockHash.update(str(self.index).encode("utf-8") + str(self.time).encode("utf-8") + str(self.data).encode("utf-8") + str(self.previousHash).encode("utf-8") + str(self.nonce).encode("utf-8"))
         return blockHash.hexdigest()
 
-    def mine(self, difficulty):
+    def mine(self, difficulty, userMining):
+        self.data += userMining
         while self.hash[0:difficulty] != "0" * difficulty:
             self.nonce += 1
             self.hash = self.calculateHash()
@@ -32,9 +33,9 @@ class Blockchain():
     def __init__(self):
         self.__chain = [Block(0, datetime.datetime.now(), "The first block!", "0" * 64)]
 
-    def addBlock(self, data):
+    def addBlock(self, data, userMining):
         newBlock = Block(len(self.__chain), datetime.datetime.now(), data, self.__chain[-1].hash)
-        newBlock.mine(DIFFICULTY)
+        newBlock.mine(DIFFICULTY, userMining)
         self.__chain.append(newBlock)
 
     def getBlock(self, index):
@@ -57,48 +58,63 @@ class User():
         blockHash.update(str(self.__username).encode("utf-8") + str(self.__password).encode("utf-8"))
         return blockHash.hexdigest()
     
-    def calculateBallance(self, blockchain):
-        ballance = 0
-        for i in range(blockchain.getBlock(-1).index + 1):
-            blockData = blockchain.getBlock(i).data.split("\n")
-            for transaction in blockData:
-                transactionData = transaction.split(",")
-                if transactionData[0] == self.hash:
-                    ballance += int(transactionData[1])
-        if blockchain.isValid():
-            return ballance
-        return 0
+def calculateBallance(hash, blockchain):
+    ballance = 0
+    for i in range(blockchain.getBlock(-1).index + 1):
+        blockData = blockchain.getBlock(i).data.split("\n")
+        for transaction in blockData:
+            transactionData = transaction.split(",")
+            if transactionData[0] == hash:
+                ballance += int(transactionData[1])
+    if blockchain.isValid():
+        return ballance
+    return 0
     
-class Transaction():
-    def __init__(self, transferer, transferee, value, username, password):
-        self.transferer = transferer
-        self.transferee = transferee
-        self.__username = username
-        self.__password = password
-        self.__authorised = self.calculateHash() == transferer
-        self.value = value if transferer.calculateBallance() >= value else 0
-        self.data = f"{transferer},{value},{transferee}\n" if self.__authorised else f"{transferer},0,{"0" * 64}"
-
-    def calculateHash(self):
-        blockHash = hashlib.sha256()
-        blockHash.update(str(self.__username).encode("utf-8") + str(self.__password).encode("utf-8"))
-        return blockHash.hexdigest()
     
 def main():
     blockchain = Blockchain()
     currentUsername = ""
     currentPassword = ""
+    currentUser = None
+    loggedIn = False
+    currentData = ""
     while True:
-        print("[L]ogin")
-        print("Get user [b]allance")
-        print("[Q]uit")
-        userInput = input().lower()[0]
-        if userInput == 'l':
-            pass
-        elif userInput == 'q':
-            break
+        if not loggedIn:
+            print("[L]ogin")
+            print("Get user [b]allance")
+            print("[Q]uit")
+            userInput = input().lower()[0]
+            if userInput == 'l':
+                currentUsername = input("Enter username: ")
+                currentPassword = input("Enter password: ")
+                currentUser = User(currentUsername, currentPassword)
+                loggedIn = True
+            elif userInput == 'b':
+                hash = input("Enter hash: ")
+                calculateBallance(hash, blockchain)
+            elif userInput == 'q':
+                break
+            else:
+                print("That is not a recognised command.")
         else:
-            print("That is not a recognised command.")
+            print("Get my [b]allance")
+            print("[M]ine")
+            print("Make a [t]ransaction")
+            print("[L]ogout")
+            userInput = input().lower()[0]
+            if userInput == 'b':
+                print(calculateBallance(currentUser.hash, blockchain))
+            elif userInput == 'm':
+                blockchain.addBlock(currentData, currentUser.hash)
+            elif userInput == 't':
+                amount = int(input("Enter Amount: "))
+                otherUser = input("Enter other user: ")
+                currentData += f"\n{currentUser.hash},{amount},{otherUser}"
+            elif userInput == 'l':
+                loggedIn = False
+            else:
+                print("That command isn't recognised")
+
 
 if __name__ == "__main__":
     main()
