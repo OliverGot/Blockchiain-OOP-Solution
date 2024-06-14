@@ -1,9 +1,8 @@
 import datetime
 import hashlib
-import random
 
 DIFFICULTY = 3
-TRANSACTIONS_PER_BLOCK = 1
+PAYMENT_PER_MINED = (16 ** DIFFICULTY) // 4 ** (DIFFICULTY + 1)
 
 class Block():
     def __init__(self, index, time, data, previousHash):
@@ -20,7 +19,7 @@ class Block():
         return blockHash.hexdigest()
 
     def mine(self, difficulty, userMining):
-        self.data += userMining
+        self.data += f"{'0' * 64},{PAYMENT_PER_MINED},{userMining}"
         while self.hash[0:difficulty] != "0" * difficulty:
             self.nonce += 1
             self.hash = self.calculateHash()
@@ -63,13 +62,25 @@ def calculateBallance(hash, blockchain):
     for i in range(blockchain.getBlock(-1).index + 1):
         blockData = blockchain.getBlock(i).data.split("\n")
         for transaction in blockData:
-            transactionData = transaction.split(",")
-            if transactionData[0] == hash:
-                ballance += int(transactionData[1])
+            if len(transaction.split(",")) == 3:
+                transactionData = transaction.split(",")
+                if transactionData[2] == hash:
+                    ballance += int(transactionData[1])
     if blockchain.isValid():
         return ballance
     return 0
     
+class Transaction():
+    def __init__(self):
+        self.__data = ""
+    
+    def addData(self, transferer, amount, transferee, blockchain):
+        if calculateBallance(transferer, blockchain) < amount:
+            amount = 0
+        self.__data += f"{transferer},{amount},{transferee}\n"
+
+    def getData(self):
+        return self.__data
     
 def main():
     blockchain = Blockchain()
@@ -77,7 +88,7 @@ def main():
     currentPassword = ""
     currentUser = None
     loggedIn = False
-    currentData = ""
+    currentTransaction = Transaction()
     while True:
         if not loggedIn:
             print("[L]ogin")
@@ -97,6 +108,8 @@ def main():
             else:
                 print("That is not a recognised command.")
         else:
+            print()
+            print(f"Logged in as: {currentUser.hash}")
             print("Get my [b]allance")
             print("[M]ine")
             print("Make a [t]ransaction")
@@ -105,13 +118,17 @@ def main():
             if userInput == 'b':
                 print(calculateBallance(currentUser.hash, blockchain))
             elif userInput == 'm':
-                blockchain.addBlock(currentData, currentUser.hash)
+                blockchain.addBlock(currentTransaction.getData(), currentUser.hash)
             elif userInput == 't':
                 amount = int(input("Enter Amount: "))
-                otherUser = input("Enter other user: ")
-                currentData += f"\n{currentUser.hash},{amount},{otherUser}"
+                otherUser = input("Enter other user hash: ")
+                currentTransaction.addData(currentUser.hash, amount, otherUser, blockchain)
             elif userInput == 'l':
                 loggedIn = False
+            elif userInput == 'd':
+                for i in range(blockchain.getBlock(-1).index + 1):
+                    print(blockchain.getBlock(i))
+                    print()
             else:
                 print("That command isn't recognised")
 
