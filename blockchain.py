@@ -70,30 +70,35 @@ class User():
         return 0
     
 class Transaction():
-    def __init__(self, transferer, transferee, value, username, password, blockchain):
+    def __init__(self, transferer, transferee, value, username, password):
         self.transferer = transferer
         self.transferee = transferee
         self.__username = username
         self.__password = password
-        self.__authorised = self.calculateHash()
-        self.value = value
+        self.__authorised = self.calculateHash() == transferer
+        self.value = value if transferer.calculateBallance() >= value else 0
+        self.data = f"{transferer},{value},{transferee}\n" if self.__authorised else f"{transferer},0,{"0" * 64}"
 
     def calculateHash(self):
         blockHash = hashlib.sha256()
         blockHash.update(str(self.__username).encode("utf-8") + str(self.__password).encode("utf-8"))
         return blockHash.hexdigest()
     
-blockchain = Blockchain()
-user = User("Oliver", "password")
-for i in range(20):
-    workingBlock = ""
-    for i in range(10):
-        amount = random.randint(0, 20)
-        workingBlock += user.hash + f",{amount}\n"
-    blockchain.addBlock(workingBlock)
+def main():
+    blockchain = Blockchain()
+    currentUsername = ""
+    currentPassword = ""
+    while True:
+        print("[L]ogin")
+        print("Get user [b]allance")
+        print("[Q]uit")
+        userInput = input().lower()[0]
+        if userInput == 'l':
+            pass
+        elif userInput == 'q':
+            break
+        else:
+            print("That is not a recognised command.")
 
-for i in range(0, blockchain.getBlock(-1).index + 1):
-    print(blockchain.getBlock(i))
-    print()
-print(user.calculateBallance(blockchain))
-print(blockchain.isValid())
+if __name__ == "__main__":
+    main()
