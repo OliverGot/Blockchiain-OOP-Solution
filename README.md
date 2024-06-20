@@ -2,5 +2,5 @@
 - [x] basic blockchain
 - [x] proof of work
 - [x] users
-- [ ] transactions between users
-- [ ] split between multiple machines
+- [x] transactions between users
+- [x] signatures
